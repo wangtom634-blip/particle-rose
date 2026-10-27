@@ -47,13 +47,13 @@ canvas { display: block; }
 }
 #loading-overlay.hidden { opacity: 0; pointer-events: none; }
 .loading-text {
-    color: #ff4488; font-size: 1.4rem; font-weight: 300;
+    color: #ffd6dc; font-size: 1.4rem; font-weight: 300;
     letter-spacing: 0.15em; margin-bottom: 20px;
 }
 .loading-dots { display: flex; gap: 8px; }
 .loading-dots span {
     width: 8px; height: 8px; border-radius: 50%;
-    background: #ff4488; animation: dotPulse 1.4s infinite ease-in-out;
+    background: #ffd6dc; animation: dotPulse 1.4s infinite ease-in-out;
 }
 .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
 .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
@@ -89,7 +89,7 @@ canvas { display: block; }
     border: 1px solid rgba(255,255,255,0.1);
     transition: opacity 0.5s; pointer-events: none;
 }
-#instructions .title { color: #ff6699; font-weight: 600; margin-bottom: 4px; font-size: 0.82rem; }
+#instructions .title { color: #f8c8cf; font-weight: 600; margin-bottom: 4px; font-size: 0.82rem; }
 #instructions .icon { display: inline-block; width: 18px; text-align: center; }
 
 /* Vignette overlay */
@@ -114,7 +114,7 @@ canvas { display: block; }
 <div id="instructions">
     <div class="title">操作说明</div>
     <div><span class="icon">✋</span> 握拳/张手 → 粒子聚散</div>
-    <div><span class="icon">👈👉</span> 手掌左右 → 玫瑰旋转</div>
+    <div><span class="icon">👈👉</span> 左右移动手掌 → 玫瑰旋转</div>
     <div><span class="icon">🔍</span> 手掌远近 → 画面缩放</div>
     <div style="margin-top:4px;color:rgba(255,255,255,0.5)">鼠标拖动旋转 · 滚轮缩放</div>
 </div>
@@ -138,7 +138,7 @@ const camText = document.getElementById('cam-text');
 const instructions = document.getElementById('instructions');
 
 // ==================== Constants ====================
-const PARTICLE_COUNT = 5000;
+const PARTICLE_COUNT = 9000;
 const ROSE_CENTER_Y = -0.5;
 const SCATTER_RADIUS = 13;
 const SCATTER_INNER = 4;
@@ -149,6 +149,13 @@ const INITIAL_ANIM_DURATION = 2000; // ms
 
 // ==================== Rose Geometry Generator ====================
 function randomRange(min, max) { return min + Math.random() * (max - min); }
+
+function randomGaussian() {
+    let u = 0, v = 0;
+    while (u === 0) u = Math.random();
+    while (v === 0) v = Math.random();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
 
 function lerpColor(c1, c2, t) {
     return [
@@ -165,11 +172,11 @@ function hexToRGB(hex) {
 
 // Petal layer parameters
 const PETAL_COLORS = {
-    inner: hexToRGB('#ff0066'),
-    outer: hexToRGB('#cc0055'),
-    sepal:  hexToRGB('#00cc66'),
-    stem:   hexToRGB('#00cc66'),
-    leaf:   hexToRGB('#009944')
+    inner: hexToRGB('#fff5f3'),
+    outer: hexToRGB('#d98798'),
+    sepal:  hexToRGB('#b7c4a4'),
+    stem:   hexToRGB('#87977b'),
+    leaf:   hexToRGB('#6f8068')
 };
 
 // Golden angle for natural spiral phyllotaxis (~137.5°)
@@ -183,37 +190,37 @@ const LAYER_DEFS = [
     { petals: 7, count: 500, baseR: 0.06, tipR: 0.30, baseH: 1.05, tipH: 1.7,
       arch: 0.06, spread: 0.05, cup: 0.42, tilt: 0.08, recurve: 0.00, bowHeight: 0.06,
       angleOffset: 0,
-      colorStart: hexToRGB('#990033'), colorEnd: hexToRGB('#880022') },
+      colorStart: hexToRGB('#fff7f4'), colorEnd: hexToRGB('#f4c0c7') },
     // Layer 1: inner core — dense small petals, very deep red
     { petals: 7, count: 550, baseR: 0.12, tipR: 0.55, baseH: 0.80, tipH: 2.0,
       arch: 0.12, spread: 0.08, cup: 0.38, tilt: 0.15, recurve: 0.01, bowHeight: 0.12,
       angleOffset: GOLDEN_ANGLE * 0.38,
-      colorStart: hexToRGB('#bb0033'), colorEnd: hexToRGB('#990028') },
+      colorStart: hexToRGB('#fff1ee'), colorEnd: hexToRGB('#ecabb7') },
     // Layer 2: inner-mid — opening buds, rich crimson red
     { petals: 8, count: 600, baseR: 0.22, tipR: 0.90, baseH: 0.50, tipH: 2.2,
       arch: 0.22, spread: 0.11, cup: 0.34, tilt: 0.25, recurve: 0.03, bowHeight: 0.18,
       angleOffset: GOLDEN_ANGLE * 1.20,
-      colorStart: hexToRGB('#dd0038'), colorEnd: hexToRGB('#bb0030') },
+      colorStart: hexToRGB('#ffe4e1'), colorEnd: hexToRGB('#e39aa8') },
     // Layer 3: middle — classic rose bloom, rich red
     { petals: 8, count: 630, baseR: 0.35, tipR: 1.40, baseH: 0.15, tipH: 2.4,
       arch: 0.38, spread: 0.17, cup: 0.28, tilt: 0.38, recurve: 0.06, bowHeight: 0.28,
       angleOffset: GOLDEN_ANGLE * 2.00,
-      colorStart: hexToRGB('#ee0044'), colorEnd: hexToRGB('#cc0038') },
+      colorStart: hexToRGB('#ffd4d4'), colorEnd: hexToRGB('#d88799') },
     // Layer 4: mid-outer — half-open, vibrant rose red
     { petals: 8, count: 630, baseR: 0.55, tipR: 1.95, baseH: -0.30, tipH: 2.2,
       arch: 0.58, spread: 0.24, cup: 0.22, tilt: 0.50, recurve: 0.12, bowHeight: 0.36,
       angleOffset: GOLDEN_ANGLE * 2.70,
-      colorStart: hexToRGB('#ff0055'), colorEnd: hexToRGB('#dd0044') },
+      colorStart: hexToRGB('#ffc0ca'), colorEnd: hexToRGB('#c9788c') },
     // Layer 5: outer — open petals with noticeable recurve
     { petals: 8, count: 600, baseR: 0.80, tipR: 2.55, baseH: -0.85, tipH: 1.8,
       arch: 0.80, spread: 0.30, cup: 0.15, tilt: 0.60, recurve: 0.22, bowHeight: 0.42,
       angleOffset: GOLDEN_ANGLE * 3.40,
-      colorStart: hexToRGB('#ff1166'), colorEnd: hexToRGB('#ee0050') },
+      colorStart: hexToRGB('#f7a0b0'), colorEnd: hexToRGB('#c96680') },
     // Layer 6: guard — fully spread outer petals, prominent recurve, soft rose-pink
     { petals: 7, count: 490, baseR: 1.05, tipR: 3.10, baseH: -1.40, tipH: 1.3,
       arch: 1.00, spread: 0.38, cup: 0.08, tilt: 0.68, recurve: 0.40, bowHeight: 0.44,
       angleOffset: GOLDEN_ANGLE * 4.20,
-      colorStart: hexToRGB('#ff2277'), colorEnd: hexToRGB('#ff0060') }
+      colorStart: hexToRGB('#ef93a8'), colorEnd: hexToRGB('#b95f78') }
 ];
 
 // Petal total: 500+550+600+630+630+600+490 = 4000
@@ -266,9 +273,14 @@ function generateRoseGeometry() {
                 const rTilted = rFinal * Math.cos(tiltAngle) + h * Math.sin(tiltAngle);
                 const yTilted = h * Math.cos(tiltAngle) - rFinal * Math.sin(tiltAngle);
 
-                const y = yTilted + ROSE_CENTER_Y;
-                const x = rTilted * Math.cos(theta);
-                const z = rTilted * Math.sin(theta);
+                const cloud = 0.035 + 0.12 * t + 0.04 * layer.spread;
+                let y = yTilted + ROSE_CENTER_Y;
+                let x = rTilted * Math.cos(theta);
+                let z = rTilted * Math.sin(theta);
+                // 将粒子从花瓣骨架向四周扩散，形成蓬松花瓣云
+                x += randomGaussian() * cloud;
+                y += randomGaussian() * cloud * 0.75;
+                z += randomGaussian() * cloud;
 
                 positions[idx * 3] = x;
                 positions[idx * 3 + 1] = y;
@@ -291,9 +303,9 @@ function generateRoseGeometry() {
     // Sepal attachment: wraps around the flower receptacle
     const sepalBaseR = 0.90, sepalLen = 2.0, sepalBaseY = -1.2;
     // Rich green gradient: dark brownish-green base → vibrant green tip
-    const sepalBaseCol = hexToRGB('#335522');
-    const sepalMidCol  = hexToRGB('#007733');
-    const sepalTipCol  = hexToRGB('#00aa55');
+    const sepalBaseCol = hexToRGB('#6f7758');
+    const sepalMidCol  = hexToRGB('#8fa77b');
+    const sepalTipCol  = hexToRGB('#b6c99b');
     for (let s = 0; s < sepalN && idx < PARTICLE_COUNT; s++) {
         // Stagger sepals between outer petals
         const angle = (s / sepalN) * Math.PI * 2 + Math.PI / 10;
@@ -519,14 +531,14 @@ geometry.setAttribute('color', new THREE.BufferAttribute(roseData.colors, 3));
 
 const glowTex = createGlowTexture();
 const material = new THREE.PointsMaterial({
-    size: 0.14,
+    size: 0.09,
     map: glowTex,
     vertexColors: true,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
     depthTest: true,
     transparent: true,
-    opacity: 0.9
+    opacity: 0.72
 });
 
 const roseGroup = new THREE.Group();
@@ -556,14 +568,14 @@ const bgStars = new THREE.Points(bgGeom, bgMat);
 scene.add(bgStars);
 
 // --- Falling Petals ---
-const fallingPetalCount = 80;
+const fallingPetalCount = 25;
 const fpGeom = new THREE.BufferGeometry();
 const fpPositions = new Float32Array(fallingPetalCount * 3);
 const fpVelocities = new Float32Array(fallingPetalCount * 3); // drift + fall speeds
 const fpColors = new Float32Array(fallingPetalCount * 3);
 const petalColors = [
-    hexToRGB('#ff4488'), hexToRGB('#ff2266'), hexToRGB('#ee5577'),
-    hexToRGB('#ff6699'), hexToRGB('#ff3366'), hexToRGB('#cc4466')
+    hexToRGB('#ffd6dc'), hexToRGB('#f3a3b2'), hexToRGB('#e5b0b8'),
+    hexToRGB('#f8c8cf'), hexToRGB('#e99aa8'), hexToRGB('#c98291')
 ];
 function resetFallingPetal(i) {
     const angle = Math.random() * Math.PI * 2;
@@ -614,6 +626,8 @@ let mouseRotationX = 0;
 let mouseZoom = 14;
 let gestureZoom = 14;     // zoom from hand distance
 let targetGestureZoom = 14;
+let previousWristX = 0.5;
+let previousGestureTime = performance.now();
 
 // ==================== Camera Distance (zoom) ====================
 function updateCameraDistance() {
@@ -710,7 +724,7 @@ function animate(timestamp) {
     fpMat.opacity = 0.55 + Math.sin(elapsed * 2.5) * 0.15;
 
     // Sparkle on rose particles: subtle size pulse
-    material.size = 0.14 + Math.sin(elapsed * 3.0) * 0.015;
+    material.size = 0.09 + Math.sin(elapsed * 3.0) * 0.008;
 
     renderer.render(scene, camera);
 
@@ -846,16 +860,18 @@ function setupMediaPipe() {
             const zoomT = (scaleClamped - 0.04) / 0.31; // 0=far, 1=close
             targetGestureZoom = 22 - zoomT * 16; // far=22, close=6
 
-            // Compute hand horizontal position for rotation
-            const wristX = wrist.x; // 0=left, 1=right
-            const deadZone = 0.1;
-            if (wristX < 0.4) {
-                targetRotationSpeed = -((0.4 - wristX) / 0.4) * MAX_ROTATION_SPEED;
-            } else if (wristX > 0.6) {
-                targetRotationSpeed = ((wristX - 0.6) / 0.4) * MAX_ROTATION_SPEED;
-            } else {
-                targetRotationSpeed = 0;
-            }
+            // 左右移动手掌控制旋转：使用位置 + 速度，避免只看单帧位置
+            const wristX = wrist.x;
+            const now = performance.now();
+            const dtGesture = Math.max(0.016, Math.min(0.15, (now - previousGestureTime) / 1000));
+            const velocityX = (wristX - previousWristX) / dtGesture;
+            previousWristX = wristX;
+            previousGestureTime = now;
+            const positionTerm = (wristX - 0.5) * 0.9;
+            const velocityTerm = velocityX * 2.8;
+            const rotationSignal = Math.abs(velocityX) > 0.025 ? velocityTerm : positionTerm;
+            targetRotationSpeed = Math.max(-MAX_ROTATION_SPEED,
+                Math.min(MAX_ROTATION_SPEED, rotationSignal * MAX_ROTATION_SPEED));
         } else {
             // No hand detected — graceful hold of last values
             if (performance.now() - lastHandDataTime > 2000) {
